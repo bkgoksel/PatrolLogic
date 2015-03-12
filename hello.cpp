@@ -9,18 +9,19 @@
 using namespace std;
 
 struct Vertex {
-    Vertex(string n, double s = 0.0) : name(n), suspicion(s), visitNum(0) {}
+    Vertex(string n, double s = 0.0) : name(n), suspicion(s), visitNum(0), lastVisited(false) {}
     string name;
     double suspicion;
     int visitNum;
+    bool lastVisited;
     set<pair<Vertex *, double> > neighbors;
 };
 
 struct Graph {
     map<string, Vertex *> vertices;
     double suspicion_increase;
-    Graph(double s_i = 0.5) : suspicion_increase(s_i){}
-    void addVertex(string name, double suspicion = 20) {
+    Graph(double s_i = 5) : suspicion_increase(s_i){}
+    void addVertex(string name, double suspicion = 50) {
         Vertex *v = new Vertex(name, suspicion);
         vertices[name] = v;
     }
@@ -39,6 +40,8 @@ struct Graph {
 
     void updateSuspicion() {
         for(auto const &it : vertices) {
+//            if(it.second->lastVisited) it.second->lastVisited = false;
+//            else it.second->suspicion += suspicion_increase;
             it.second->suspicion += suspicion_increase;
         }
     }
@@ -47,7 +50,6 @@ struct Graph {
         double total = 0.0;
         for(auto const &it : vertices) {
             total += it.second->suspicion;
-            cout << it.first << ", suspicion level: " << it.second->suspicion << endl;
         }
         return total;
     }
@@ -59,8 +61,9 @@ struct Guard {
     string name;
     void visitVertex(Vertex *target){
         currVertex = target;
-        target->suspicion = std::max(0.0, target->suspicion-5);
+        target->suspicion = std::max(0.0, target->suspicion-50);
         target->visitNum++;
+        target->lastVisited = true;
     }
     friend bool operator< (const Guard& lhs, const Guard& rhs) {
         return lhs.name < rhs.name;
@@ -133,40 +136,41 @@ int main() {
     map3.addVertex("rightRoom");
     map3.connectVertices("leftmostRoom","roomHallway", 50);
     map3.connectVertices("roomHallway", "leftVerticalHallway", 50);
-    map3.connectVertices("leftVerticalHallway", "upHorizontalHallway", 200);
+    map3.connectVertices("leftVerticalHallway", "upHorizontalHallway", 100);
     map3.connectVertices("leftVerticalHallway","leftBottomRoom", 80);
     map3.connectVertices("leftVerticalHallway", "bottomRoomLeftSide", 100);
     map3.connectVertices("leftVerticalHallway", "middleRoomLeftSide", 80);
     map3.connectVertices("bottomRoomLeftSide", "bottomRoomRightSide", 50);
     map3.connectVertices("leftBottomRoom", "bottomHorizontalHallway", 100);
     map3.connectVertices("bottomHorizontalHallway", "bottomRoomLeftSide", 100);
-    map3.connectVertices("bottomHorizontalHallway", "leftVerticalHallway", 200);
+    map3.connectVertices("bottomHorizontalHallway", "leftVerticalHallway", 100);
     map3.connectVertices("middleRoomRightSide", "bottomHorizontalHallway", 80);
     map3.connectVertices("bottomHorizontalHallway", "bottomRightRoom", 80);
     map3.connectVertices("middleRoomLeftSide", "middleRoomRightSide", 50);
-    map3.connectVertices("bottomHorizontalHallway", "rightVerticalHallway", 200);
+    map3.connectVertices("bottomHorizontalHallway", "rightVerticalHallway", 100);
     map3.connectVertices("upHorizontalHallway", "upRoom", 50);
-    map3.connectVertices("upHorizontalHallway", "rightVerticalHallway", 200);
+    map3.connectVertices("upHorizontalHallway", "rightVerticalHallway", 100);
     map3.connectVertices("rightVerticalHallway", "rightRoom", 80);
-    //guards.insert(&g3);
+    guards.insert(&g3);
     g.currVertex = g2.currVertex = g3.currVertex = map3.getVertex("leftmostRoom");
+    map3.suspicion_increase = 5;
     patrol(map3, guards);
-    map3.suspicion_increase = 10;
 
 
     return 0;
 }
 
 void patrol(Graph &map, set<Guard *> &guards) {
-    for(int i = 0; i < 100; i++) {
-        for(Guard *guard : guards) {
-            //cout << guard->name << " is in " << guard->currVertex->name << endl;
-            Vertex *target = selectNext(map, guard->currVertex);
-            guard->visitVertex(target);
-            cout << guard->name << " visited " << target->name << endl;
+    for (int i = 0; i < 20; i++) {
+        while(map.totalSuspicion() > 0.0) {
+            for(Guard *guard : guards) {
+                Vertex *target = selectNext(map, guard->currVertex);
+                guard->visitVertex(target);
+                cout << guard->name << " visited " << target->name << endl;
+            }
+            cout << endl;
         }
-        //map.updateSuspicion();
-        cout << endl;
+        map.updateSuspicion();
     }
     for(auto const &it : map.vertices) {
         cout << it.first << " visit num: " << it.second->visitNum << endl;
